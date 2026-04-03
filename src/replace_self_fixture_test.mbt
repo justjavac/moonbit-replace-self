@@ -207,6 +207,53 @@ fn wait_until(
 }
 
 ///|
+/// Returns whether `path` exists and is a directory.
+fn is_dir_or_false(path : String) -> Bool {
+  @fs.is_dir(path) catch {
+    _ => false
+  }
+}
+
+///|
+/// Lists a directory or returns an empty array on failure.
+fn read_dir_or_empty(path : String) -> Array[String] {
+  @fs.read_dir(path) catch {
+    _ => []
+  }
+}
+
+///|
+/// Returns the first existing regular file from the candidate paths.
+fn first_existing_file(paths : Array[String]) -> String? {
+  for path in paths {
+    if @fs.path_exists(path) && !is_dir_or_false(path) {
+      return Some(path)
+    }
+  }
+  None
+}
+
+///|
+/// Recursively searches for the built fixture executable under `root`.
+fn find_fixture_executable(root : String, executable_name : String) -> String? {
+  if !@fs.path_exists(root) || !is_dir_or_false(root) {
+    return None
+  }
+  for entry in read_dir_or_empty(root) {
+    let path = join_path_for_fixture([root, entry])
+    if is_dir_or_false(path) {
+      match find_fixture_executable(path, executable_name) {
+        Some(found) => return Some(found)
+        None => ()
+      }
+    } else if entry == executable_name {
+      return Some(path)
+    }
+  }
+  None
+}
+
+///|
 /// Returns the built fixture executable path.
 fn built_fixture_executable(project_root : String) -> String {
   let executable_name = if is_windows_host() {
@@ -214,9 +261,25 @@ fn built_fixture_executable(project_root : String) -> String {
   } else {
     "fixture"
   }
-  join_path_for_fixture([
-    project_root, "_build", "native", "debug", "build", "cmd", "fixture", executable_name,
+  let debug_root = join_path_for_fixture([
+    project_root, "_build", "native", "debug",
   ])
+  let candidates = [
+    join_path_for_fixture([
+      debug_root, "build", "cmd", "fixture", executable_name,
+    ]),
+    join_path_for_fixture([
+      debug_root, "test", "cmd", "fixture", executable_name,
+    ]),
+  ]
+  match first_existing_file(candidates) {
+    Some(path) => path
+    None =>
+      match find_fixture_executable(debug_root, executable_name) {
+        Some(path) => path
+        None => candidates[0]
+      }
+  }
 }
 
 ///|
