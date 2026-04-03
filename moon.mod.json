@@ -10,6 +10,7 @@
     "native"
   ],
   "description": "Replace or delete the currently running executable on Linux, macOS, and Windows.",
+  "source": "src",
   "deps": {
     "moonbitlang/x": "0.4.41"
   },

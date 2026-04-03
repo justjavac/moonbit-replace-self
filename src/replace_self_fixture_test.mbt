@@ -143,26 +143,35 @@ fn copy_fixture_project_or_panic(
   destination_root : String,
 ) -> Unit {
   create_dir_or_panic(destination_root)
-  create_dir_or_panic(join_path_for_fixture([destination_root, "cmd"]))
+  create_dir_or_panic(join_path_for_fixture([destination_root, "src"]))
+  create_dir_or_panic(join_path_for_fixture([destination_root, "src", "cmd"]))
   create_dir_or_panic(
-    join_path_for_fixture([destination_root, "cmd", "fixture"]),
+    join_path_for_fixture([destination_root, "src", "cmd", "fixture"]),
   )
 
   copy_project_file_or_panic(source_root, destination_root, ["moon.mod.json"])
-  copy_project_file_or_panic(source_root, destination_root, ["moon.pkg"])
-  copy_project_file_or_panic(source_root, destination_root, ["errors.mbt"])
-  copy_project_file_or_panic(source_root, destination_root, ["ffi.mbt"])
-  copy_project_file_or_panic(source_root, destination_root, ["platform.mbt"])
-  copy_project_file_or_panic(source_root, destination_root, ["replace_self.mbt"])
-  copy_project_file_or_panic(source_root, destination_root, ["validation.mbt"])
+  copy_project_file_or_panic(source_root, destination_root, ["src", "moon.pkg"])
   copy_project_file_or_panic(source_root, destination_root, [
-    "replace_self_native.c",
+    "src", "errors.mbt",
+  ])
+  copy_project_file_or_panic(source_root, destination_root, ["src", "ffi.mbt"])
+  copy_project_file_or_panic(source_root, destination_root, [
+    "src", "platform.mbt",
   ])
   copy_project_file_or_panic(source_root, destination_root, [
-    "cmd", "fixture", "moon.pkg",
+    "src", "replace_self.mbt",
   ])
   copy_project_file_or_panic(source_root, destination_root, [
-    "cmd", "fixture", "main.mbt",
+    "src", "validation.mbt",
+  ])
+  copy_project_file_or_panic(source_root, destination_root, [
+    "src", "replace_self_native.c",
+  ])
+  copy_project_file_or_panic(source_root, destination_root, [
+    "src", "cmd", "fixture", "moon.pkg",
+  ])
+  copy_project_file_or_panic(source_root, destination_root, [
+    "src", "cmd", "fixture", "main.mbt",
   ])
 }
 
@@ -217,7 +226,7 @@ fn build_fixture_executable(workspace : String) -> String {
   let project_root = join_path_for_fixture([workspace, "project"])
   copy_fixture_project_or_panic(source_root, project_root)
   if run_process_or_panic(moon_executable_or_panic(), [
-      "-C", project_root, "build", "cmd/fixture", "--target", "native",
+      "-C", project_root, "build", "src/cmd/fixture", "--target", "native",
     ]) !=
     0 {
     panic()
