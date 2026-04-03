@@ -277,7 +277,11 @@ fn built_fixture_executable(project_root : String) -> String {
     None =>
       match find_fixture_executable(debug_root, executable_name) {
         Some(path) => path
-        None => candidates[0]
+        None =>
+          match find_fixture_executable(project_root, executable_name) {
+            Some(path) => path
+            None => candidates[0]
+          }
       }
   }
 }
