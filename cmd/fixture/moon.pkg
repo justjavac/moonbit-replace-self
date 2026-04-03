@@ -1,0 +1,12 @@
+import {
+  "justjavac/replace_self",
+  "moonbitlang/core/env",
+  "moonbitlang/x/fs",
+  "moonbitlang/x/sys",
+}
+
+supported_targets = "native"
+
+options(
+  "is-main": true,
+)
