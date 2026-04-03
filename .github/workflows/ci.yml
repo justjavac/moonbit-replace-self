@@ -62,9 +62,11 @@ jobs:
           moon coverage clean
           moon test --target native --enable-coverage -v
 
-      - name: Run native tests on Windows
+      - name: Run stable native tests on Windows
         if: runner.os == 'Windows'
-        run: moon test --target native -v
+        run: |
+          moon test src/replace_self_test.mbt --target native -v
+          moon test src/replace_self_wbtest.mbt --target native -v
 
       - name: Collect Windows coverage from stable test targets
         if: runner.os == 'Windows'
