@@ -285,49 +285,53 @@ fn log_fixture_search_walk(
 }
 
 ///|
+/// Returns possible fixture executable file names for the current host.
+fn fixture_executable_names() -> Array[String] {
+  if is_windows_host() {
+    ["fixture.exe", "fixture"]
+  } else {
+    ["fixture", "fixture.exe"]
+  }
+}
+
+///|
 /// Returns the built fixture executable path.
 fn built_fixture_executable(project_root : String) -> String {
-  let executable_name = if is_windows_host() {
-    "fixture.exe"
-  } else {
-    "fixture"
-  }
+  let executable_names = fixture_executable_names()
+  let executable_name = executable_names[0]
   let debug_root = join_path_for_fixture([
     project_root, "_build", "native", "debug",
   ])
-  let candidates = [
-    join_path_for_fixture([
-      debug_root, "build", "cmd", "fixture", executable_name,
-    ]),
-    join_path_for_fixture([
-      debug_root, "test", "cmd", "fixture", executable_name,
-    ]),
-  ]
+  let candidates = []
+  for name in executable_names {
+    candidates.push(
+      join_path_for_fixture([debug_root, "build", "cmd", "fixture", name]),
+    )
+    candidates.push(
+      join_path_for_fixture([debug_root, "test", "cmd", "fixture", name]),
+    )
+  }
   match first_existing_file(candidates) {
     Some(path) => path
-    None =>
-      match find_fixture_executable(debug_root, executable_name) {
-        Some(path) => path
-        None =>
-          match find_fixture_executable(project_root, executable_name) {
-            Some(path) => path
-            None => {
-              for candidate in candidates {
-                let exists = @fs.path_exists(candidate)
-                let kind = if is_dir_or_false(candidate) {
-                  "dir"
-                } else {
-                  "file"
-                }
-                println(
-                  "fixture candidate (\{kind}) exists=\{exists}: \{candidate}",
-                )
-              }
-              log_fixture_search(project_root, executable_name)
-              candidates[0]
-            }
-          }
+    None => {
+      for name in executable_names {
+        match find_fixture_executable(debug_root, name) {
+          Some(path) => return path
+          None => ()
+        }
+        match find_fixture_executable(project_root, name) {
+          Some(path) => return path
+          None => ()
+        }
       }
+      for candidate in candidates {
+        let exists = @fs.path_exists(candidate)
+        let kind = if is_dir_or_false(candidate) { "dir" } else { "file" }
+        println("fixture candidate (\{kind}) exists=\{exists}: \{candidate}")
+      }
+      log_fixture_search(project_root, executable_name)
+      candidates[0]
+    }
   }
 }
 
