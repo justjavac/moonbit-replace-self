@@ -254,6 +254,37 @@ fn find_fixture_executable(root : String, executable_name : String) -> String? {
 }
 
 ///|
+/// Prints fixture-related paths under the temporary project for debugging.
+fn log_fixture_search(root : String, executable_name : String) -> Unit {
+  println("fixture lookup root: \{root}")
+  println("expected executable name: \{executable_name}")
+  log_fixture_search_walk(root, executable_name, 0, 8)
+}
+
+///|
+/// Recursively prints matching fixture-related paths for debugging.
+fn log_fixture_search_walk(
+  root : String,
+  executable_name : String,
+  depth : Int,
+  max_depth : Int,
+) -> Unit {
+  if depth > max_depth || !@fs.path_exists(root) || !is_dir_or_false(root) {
+    return
+  }
+  for entry in read_dir_or_empty(root) {
+    let path = join_path_for_fixture([root, entry])
+    if entry.contains("fixture") || entry == executable_name {
+      let kind = if is_dir_or_false(path) { "dir" } else { "file" }
+      println("fixture search hit (\{kind}): \{path}")
+    }
+    if is_dir_or_false(path) {
+      log_fixture_search_walk(path, executable_name, depth + 1, max_depth)
+    }
+  }
+}
+
+///|
 /// Returns the built fixture executable path.
 fn built_fixture_executable(project_root : String) -> String {
   let executable_name = if is_windows_host() {
@@ -280,7 +311,21 @@ fn built_fixture_executable(project_root : String) -> String {
         None =>
           match find_fixture_executable(project_root, executable_name) {
             Some(path) => path
-            None => candidates[0]
+            None => {
+              for candidate in candidates {
+                let exists = @fs.path_exists(candidate)
+                let kind = if is_dir_or_false(candidate) {
+                  "dir"
+                } else {
+                  "file"
+                }
+                println(
+                  "fixture candidate (\{kind}) exists=\{exists}: \{candidate}",
+                )
+              }
+              log_fixture_search(project_root, executable_name)
+              candidates[0]
+            }
           }
       }
   }
