@@ -1,5 +1,10 @@
 # justjavac/replace_self
 
+[![coverage](https://img.shields.io/codecov/c/github/justjavac/moonbit-replace-self/main?label=coverage)](https://codecov.io/gh/justjavac/moonbit-replace-self)
+[![linux](https://img.shields.io/codecov/c/github/justjavac/moonbit-replace-self/main?flag=linux&label=linux)](https://codecov.io/gh/justjavac/moonbit-replace-self)
+[![macos](https://img.shields.io/codecov/c/github/justjavac/moonbit-replace-self/main?flag=macos&label=macos)](https://codecov.io/gh/justjavac/moonbit-replace-self)
+[![windows](https://img.shields.io/codecov/c/github/justjavac/moonbit-replace-self/main?flag=windows&label=windows)](https://codecov.io/gh/justjavac/moonbit-replace-self)
+
 `justjavac/replace_self` is a native MoonBit package for two closely related
 deployment tasks:
 
@@ -160,6 +165,10 @@ the current workspace. The integration tests also validate real replace/delete
 behavior by building and running a temporary fixture project copy, so the
 behavioral test surface is larger than the raw line-rate alone suggests.
 
+GitHub Actions uploads coverage from Linux, macOS, and Windows to Codecov, and
+the badges at the top of this README update after Codecov finishes processing
+the latest `main` branch reports.
+
 ## Implementation notes
 
 - Unix replacement is implemented with a same-path `rename`, which is atomic on
@@ -171,4 +180,4 @@ behavioral test surface is larger than the raw line-rate alone suggests.
 
 ## License
 
-Apache-2.0
+MIT

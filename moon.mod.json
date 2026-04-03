@@ -2,8 +2,8 @@
   "name": "justjavac/replace_self",
   "version": "0.1.0",
   "readme": "README.mbt.md",
-  "repository": "",
-  "license": "Apache-2.0",
+  "repository": "https://github.com/justjavac/moonbit-replace-self",
+  "license": "MIT",
   "keywords": [
     "self-update",
     "self-delete",
