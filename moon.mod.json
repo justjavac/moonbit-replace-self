@@ -1,0 +1,17 @@
+{
+  "name": "justjavac/replace_self",
+  "version": "0.1.0",
+  "readme": "README.mbt.md",
+  "repository": "",
+  "license": "Apache-2.0",
+  "keywords": [
+    "self-update",
+    "self-delete",
+    "native"
+  ],
+  "description": "Replace or delete the currently running executable on Linux, macOS, and Windows.",
+  "deps": {
+    "moonbitlang/x": "0.4.41"
+  },
+  "preferred-target": "native"
+}

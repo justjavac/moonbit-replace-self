@@ -1,0 +1,5 @@
+_build/
+.mooncakes/
+.test-tmp/
+coverage.xml
+lcov.info
