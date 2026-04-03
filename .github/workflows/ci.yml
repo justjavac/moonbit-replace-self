@@ -56,10 +56,22 @@ jobs:
       - name: Check native target
         run: moon check --target native
 
-      - name: Run native tests with coverage
+      - name: Run native tests with coverage on Unix
+        if: runner.os != 'Windows'
         run: |
           moon coverage clean
           moon test --target native --enable-coverage -v
+
+      - name: Run native tests on Windows
+        if: runner.os == 'Windows'
+        run: moon test --target native -v
+
+      - name: Collect Windows coverage from stable test targets
+        if: runner.os == 'Windows'
+        run: |
+          moon coverage clean
+          moon test src/replace_self_test.mbt --target native --enable-coverage -v
+          moon test src/replace_self_wbtest.mbt --target native --enable-coverage -v
 
       - name: Generate coverage report
         run: moon coverage analyze -p justjavac/replace_self -- -f cobertura -o _build/${{ matrix.coverage_file }}
