@@ -109,6 +109,17 @@ fn copy_file_or_panic(source : String, destination : String) -> Unit {
 }
 
 ///|
+/// Ensures the copied binary remains executable on Unix hosts.
+fn ensure_executable_or_panic(path : String) -> Unit {
+  if is_windows_host() {
+    return
+  }
+  if run_process_or_panic("chmod", ["+x", path]) != 0 {
+    panic()
+  }
+}
+
+///|
 /// Appends `suffix` to a binary file.
 fn append_bytes_to_file_or_panic(path : String, suffix : Bytes) -> Unit {
   try {
@@ -434,6 +445,8 @@ test "replace_self replaces a copied fixture executable" {
     fixture_executable, workspace,
   )
   copy_file_or_panic(fixture_executable, target)
+  ensure_executable_or_panic(target)
+  ensure_executable_or_panic(replacement)
 
   run_fixture(target, ["replace", replacement, report])
 
@@ -460,6 +473,7 @@ test "delete_self removes a copied fixture executable" {
   ])
   let report = join_path_for_fixture([workspace, "delete-report.txt"])
   copy_file_or_panic(fixture_executable, target)
+  ensure_executable_or_panic(target)
 
   run_fixture(target, ["delete", report])
 
