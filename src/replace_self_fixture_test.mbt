@@ -109,6 +109,17 @@ fn copy_file_or_panic(source : String, destination : String) -> Unit {
 }
 
 ///|
+/// Ensures the copied binary remains executable on Unix hosts.
+fn ensure_executable_or_panic(path : String) -> Unit {
+  if is_windows_host() {
+    return
+  }
+  if run_process_or_panic("chmod", ["+x", path]) != 0 {
+    panic()
+  }
+}
+
+///|
 /// Appends `suffix` to a binary file.
 fn append_bytes_to_file_or_panic(path : String, suffix : Bytes) -> Unit {
   try {
@@ -207,16 +218,132 @@ fn wait_until(
 }
 
 ///|
+/// Returns whether `path` exists and is a directory.
+fn is_dir_or_false(path : String) -> Bool {
+  @fs.is_dir(path) catch {
+    _ => false
+  }
+}
+
+///|
+/// Lists a directory or returns an empty array on failure.
+fn read_dir_or_empty(path : String) -> Array[String] {
+  @fs.read_dir(path) catch {
+    _ => []
+  }
+}
+
+///|
+/// Returns the first existing regular file from the candidate paths.
+fn first_existing_file(paths : Array[String]) -> String? {
+  for path in paths {
+    if @fs.path_exists(path) && !is_dir_or_false(path) {
+      return Some(path)
+    }
+  }
+  None
+}
+
+///|
+/// Recursively searches for the built fixture executable under `root`.
+fn find_fixture_executable(root : String, executable_name : String) -> String? {
+  if !@fs.path_exists(root) || !is_dir_or_false(root) {
+    return None
+  }
+  for entry in read_dir_or_empty(root) {
+    let path = join_path_for_fixture([root, entry])
+    if is_dir_or_false(path) {
+      match find_fixture_executable(path, executable_name) {
+        Some(found) => return Some(found)
+        None => ()
+      }
+    } else if entry == executable_name {
+      return Some(path)
+    }
+  }
+  None
+}
+
+///|
+/// Prints fixture-related paths under the temporary project for debugging.
+fn log_fixture_search(root : String, executable_name : String) -> Unit {
+  println("fixture lookup root: \{root}")
+  println("expected executable name: \{executable_name}")
+  log_fixture_search_walk(root, executable_name, 0, 8)
+}
+
+///|
+/// Recursively prints matching fixture-related paths for debugging.
+fn log_fixture_search_walk(
+  root : String,
+  executable_name : String,
+  depth : Int,
+  max_depth : Int,
+) -> Unit {
+  if depth > max_depth || !@fs.path_exists(root) || !is_dir_or_false(root) {
+    return
+  }
+  for entry in read_dir_or_empty(root) {
+    let path = join_path_for_fixture([root, entry])
+    if entry.contains("fixture") || entry == executable_name {
+      let kind = if is_dir_or_false(path) { "dir" } else { "file" }
+      println("fixture search hit (\{kind}): \{path}")
+    }
+    if is_dir_or_false(path) {
+      log_fixture_search_walk(path, executable_name, depth + 1, max_depth)
+    }
+  }
+}
+
+///|
+/// Returns possible fixture executable file names for the current host.
+fn fixture_executable_names() -> Array[String] {
+  if is_windows_host() {
+    ["fixture.exe", "fixture"]
+  } else {
+    ["fixture", "fixture.exe"]
+  }
+}
+
+///|
 /// Returns the built fixture executable path.
 fn built_fixture_executable(project_root : String) -> String {
-  let executable_name = if is_windows_host() {
-    "fixture.exe"
-  } else {
-    "fixture"
-  }
-  join_path_for_fixture([
-    project_root, "_build", "native", "debug", "build", "cmd", "fixture", executable_name,
+  let executable_names = fixture_executable_names()
+  let executable_name = executable_names[0]
+  let debug_root = join_path_for_fixture([
+    project_root, "_build", "native", "debug",
   ])
+  let candidates = []
+  for name in executable_names {
+    candidates.push(
+      join_path_for_fixture([debug_root, "build", "cmd", "fixture", name]),
+    )
+    candidates.push(
+      join_path_for_fixture([debug_root, "test", "cmd", "fixture", name]),
+    )
+  }
+  match first_existing_file(candidates) {
+    Some(path) => path
+    None => {
+      for name in executable_names {
+        match find_fixture_executable(debug_root, name) {
+          Some(path) => return path
+          None => ()
+        }
+        match find_fixture_executable(project_root, name) {
+          Some(path) => return path
+          None => ()
+        }
+      }
+      for candidate in candidates {
+        let exists = @fs.path_exists(candidate)
+        let kind = if is_dir_or_false(candidate) { "dir" } else { "file" }
+        println("fixture candidate (\{kind}) exists=\{exists}: \{candidate}")
+      }
+      log_fixture_search(project_root, executable_name)
+      candidates[0]
+    }
+  }
 }
 
 ///|
@@ -295,8 +422,19 @@ fn read_report(report_path : String) -> String {
 
 ///|
 /// Runs the copied fixture executable.
-fn run_fixture(target_path : String, arguments : Array[String]) -> Unit {
-  if run_process_or_panic(target_path, arguments) != 0 {
+fn run_fixture(
+  target_path : String,
+  arguments : Array[String],
+  report_path : String,
+) -> Unit {
+  let status = run_process_or_panic(target_path, arguments)
+  if status != 0 {
+    println("fixture exit status: \{status}")
+    println("fixture target exists: \{@fs.path_exists(target_path)}")
+    match read_optional_text_file(report_path) {
+      Some(contents) => println("fixture report: \{contents}")
+      None => println("fixture report: <missing>")
+    }
     panic()
   }
 }
@@ -318,8 +456,10 @@ test "replace_self replaces a copied fixture executable" {
     fixture_executable, workspace,
   )
   copy_file_or_panic(fixture_executable, target)
+  ensure_executable_or_panic(target)
+  ensure_executable_or_panic(replacement)
 
-  run_fixture(target, ["replace", replacement, report])
+  run_fixture(target, ["replace", replacement, report], report)
 
   let replacement_completed = wait_until(8000, 100, fn() {
     @fs.path_exists(target) && read_file_tail(target, marker.length()) == marker
@@ -344,8 +484,9 @@ test "delete_self removes a copied fixture executable" {
   ])
   let report = join_path_for_fixture([workspace, "delete-report.txt"])
   copy_file_or_panic(fixture_executable, target)
+  ensure_executable_or_panic(target)
 
-  run_fixture(target, ["delete", report])
+  run_fixture(target, ["delete", report], report)
 
   let deletion_completed = wait_until(8000, 100, fn() {
     !@fs.path_exists(target)
