@@ -422,8 +422,19 @@ fn read_report(report_path : String) -> String {
 
 ///|
 /// Runs the copied fixture executable.
-fn run_fixture(target_path : String, arguments : Array[String]) -> Unit {
-  if run_process_or_panic(target_path, arguments) != 0 {
+fn run_fixture(
+  target_path : String,
+  arguments : Array[String],
+  report_path : String,
+) -> Unit {
+  let status = run_process_or_panic(target_path, arguments)
+  if status != 0 {
+    println("fixture exit status: \{status}")
+    println("fixture target exists: \{@fs.path_exists(target_path)}")
+    match read_optional_text_file(report_path) {
+      Some(contents) => println("fixture report: \{contents}")
+      None => println("fixture report: <missing>")
+    }
     panic()
   }
 }
@@ -448,7 +459,7 @@ test "replace_self replaces a copied fixture executable" {
   ensure_executable_or_panic(target)
   ensure_executable_or_panic(replacement)
 
-  run_fixture(target, ["replace", replacement, report])
+  run_fixture(target, ["replace", replacement, report], report)
 
   let replacement_completed = wait_until(8000, 100, fn() {
     @fs.path_exists(target) && read_file_tail(target, marker.length()) == marker
@@ -475,7 +486,7 @@ test "delete_self removes a copied fixture executable" {
   copy_file_or_panic(fixture_executable, target)
   ensure_executable_or_panic(target)
 
-  run_fixture(target, ["delete", report])
+  run_fixture(target, ["delete", report], report)
 
   let deletion_completed = wait_until(8000, 100, fn() {
     !@fs.path_exists(target)
