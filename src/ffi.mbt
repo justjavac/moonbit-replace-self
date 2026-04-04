@@ -3,7 +3,7 @@
 extern "C" fn platform_code_ffi() -> Int = "mb_replace_self_platform_code"
 
 ///|
-/// Returns the current executable path as UTF-8 bytes, or an empty value.
+/// Returns the current executable path in the native platform encoding, or an empty value.
 extern "C" fn current_executable_path_ffi() -> Bytes = "mb_replace_self_current_executable_path"
 
 ///|
@@ -30,9 +30,24 @@ fn decode_utf8(bytes : Bytes) -> String {
 }
 
 ///|
+/// Decodes native text returned by the platform-specific shim.
+fn decode_native_text(platform : Platform, bytes : Bytes) -> String {
+  if bytes.length() == 0 {
+    return ""
+  }
+
+  let value = match platform {
+    Platform::Windows => @ffi.from_wstr_lossy(bytes)
+    Platform::MacOS | Platform::Linux | Platform::Unsupported =>
+      decode_utf8(bytes)
+  }
+  value
+}
+
+///|
 /// Decodes optional text returned by the native layer.
-fn decode_optional_text(bytes : Bytes) -> String? {
-  let value = decode_utf8(bytes)
+fn decode_optional_text(platform : Platform, bytes : Bytes) -> String? {
+  let value = decode_native_text(platform, bytes)
   if value.is_empty() {
     None
   } else {
@@ -87,7 +102,8 @@ fn unit_result_from_status(
 ///|
 /// Returns the current executable path or a typed discovery error.
 fn current_executable_path_result() -> Result[String, ReplaceSelfError] {
-  match decode_optional_text(current_executable_path_ffi()) {
+  let platform = current_platform()
+  match decode_optional_text(platform, current_executable_path_ffi()) {
     Some(path) => Ok(path)
     None => Err(ReplaceSelfError::ExecutablePathUnavailable)
   }

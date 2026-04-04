@@ -1,6 +1,10 @@
 {
   "name": "justjavac/replace_self",
   "version": "0.1.0",
+  "deps": {
+    "moonbitlang/x": "0.4.41",
+    "justjavac/ffi": "0.2.0"
+  },
   "readme": "README.mbt.md",
   "repository": "https://github.com/justjavac/moonbit-replace-self",
   "license": "MIT",
@@ -11,8 +15,5 @@
   ],
   "description": "Replace or delete the currently running executable on Linux, macOS, and Windows.",
   "source": "src",
-  "deps": {
-    "moonbitlang/x": "0.4.41"
-  },
   "preferred-target": "native"
 }

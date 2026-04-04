@@ -1,4 +1,5 @@
 import {
+  "justjavac/ffi",
   "moonbitlang/core/encoding/utf8",
 }
 

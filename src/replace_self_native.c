@@ -58,17 +58,31 @@ static moonbit_bytes_t mb_make_bytes_from_buffer(const char *buf, size_t len) {
   return out;
 }
 
-static char *mb_bytes_to_c_string(moonbit_bytes_t bytes) {
-  size_t len = (size_t)Moonbit_array_length(bytes);
+#ifdef _WIN32
+static moonbit_bytes_t mb_make_bytes_from_wide_buffer(const wchar_t *buf, size_t len) {
+  return mb_make_bytes_from_buffer((const char *)buf, len * sizeof(wchar_t));
+}
+#endif
+
+static char *mb_allocate_c_string(size_t len, const char *fallback) {
   char *buffer = (char *)malloc(len + 1);
   if (buffer == NULL) {
-    mb_set_error(ENOMEM, "Failed to allocate string buffer");
+    mb_set_error(ENOMEM, fallback);
+    return NULL;
+  }
+  buffer[len] = '\0';
+  return buffer;
+}
+
+static char *mb_bytes_to_c_string(moonbit_bytes_t bytes) {
+  size_t len = (size_t)Moonbit_array_length(bytes);
+  char *buffer = mb_allocate_c_string(len, "Failed to allocate string buffer");
+  if (buffer == NULL) {
     return NULL;
   }
   if (len > 0) {
     memcpy(buffer, bytes, len);
   }
-  buffer[len] = '\0';
   return buffer;
 }
 
@@ -120,28 +134,28 @@ static wchar_t *mb_utf8_to_wide(const char *value) {
   return wide;
 }
 
-static moonbit_bytes_t mb_wide_to_bytes(const wchar_t *value) {
+static char *mb_wide_to_c_string(const wchar_t *value) {
   int length = 0;
   char *buffer = NULL;
-  moonbit_bytes_t out = NULL;
   if (value == NULL) {
-    return moonbit_make_bytes(0, 0);
+    return NULL;
   }
   length = WideCharToMultiByte(CP_UTF8, 0, value, -1, NULL, 0, NULL, NULL);
   if (length <= 0) {
-    return moonbit_make_bytes(0, 0);
+    mb_set_windows_error(GetLastError(), "Failed to convert wide path");
+    return NULL;
   }
   buffer = (char *)malloc((size_t)length);
   if (buffer == NULL) {
-    return moonbit_make_bytes(0, 0);
+    mb_set_error(ENOMEM, "Failed to allocate UTF-8 string buffer");
+    return NULL;
   }
   if (WideCharToMultiByte(CP_UTF8, 0, value, -1, buffer, length, NULL, NULL) <= 0) {
     free(buffer);
-    return moonbit_make_bytes(0, 0);
+    mb_set_windows_error(GetLastError(), "Failed to convert wide path");
+    return NULL;
   }
-  out = mb_make_bytes_from_buffer(buffer, (size_t)(length - 1));
-  free(buffer);
-  return out;
+  return buffer;
 }
 
 static int mb_write_utf8_text_file(const wchar_t *path, const char *contents) {
@@ -241,59 +255,97 @@ static int mb_schedule_windows_action(const char *script_body) {
   return MB_STATUS_OK;
 }
 
-static int mb_windows_replace_self(const char *replacement_path, const char *current_path) {
+static int mb_build_windows_self_action_script(
+  char *buffer,
+  size_t buffer_len,
+  const char *current_path,
+  const char *replacement_path,
+  const char *action_name
+) {
+  int written = replacement_path == NULL
+    ? snprintf(
+        buffer,
+        buffer_len,
+        "@echo off\r\n"
+        "setlocal enableextensions\r\n"
+        ":retry\r\n"
+        "del /f /q \"%s\" >nul 2>nul\r\n"
+        "if exist \"%s\" (\r\n"
+        "  timeout /t 1 /nobreak >nul\r\n"
+        "  goto retry\r\n"
+        ")\r\n"
+        "del /f /q \"%%~f0\" >nul 2>nul\r\n",
+        current_path,
+        current_path
+      )
+    : snprintf(
+        buffer,
+        buffer_len,
+        "@echo off\r\n"
+        "setlocal enableextensions\r\n"
+        ":retry\r\n"
+        "del /f /q \"%s\" >nul 2>nul\r\n"
+        "if exist \"%s\" (\r\n"
+        "  timeout /t 1 /nobreak >nul\r\n"
+        "  goto retry\r\n"
+        ")\r\n"
+        "move /y \"%s\" \"%s\" >nul 2>nul\r\n"
+        "if errorlevel 1 (\r\n"
+        "  timeout /t 1 /nobreak >nul\r\n"
+        "  goto retry\r\n"
+        ")\r\n"
+        "del /f /q \"%%~f0\" >nul 2>nul\r\n",
+        current_path,
+        current_path,
+        replacement_path,
+        current_path
+      );
+  if (written < 0 || (size_t)written >= buffer_len) {
+    mb_set_error(ENOMEM, action_name);
+    return MB_STATUS_ERROR;
+  }
+  return MB_STATUS_OK;
+}
+
+static int mb_schedule_windows_self_action(
+  const char *current_path,
+  const char *replacement_path,
+  size_t script_capacity,
+  const char *build_error_message
+) {
   char script[8192];
-  int written = snprintf(
-    script,
-    sizeof(script),
-    "@echo off\r\n"
-    "setlocal enableextensions\r\n"
-    ":retry\r\n"
-    "del /f /q \"%s\" >nul 2>nul\r\n"
-    "if exist \"%s\" (\r\n"
-    "  timeout /t 1 /nobreak >nul\r\n"
-    "  goto retry\r\n"
-    ")\r\n"
-    "move /y \"%s\" \"%s\" >nul 2>nul\r\n"
-    "if errorlevel 1 (\r\n"
-    "  timeout /t 1 /nobreak >nul\r\n"
-    "  goto retry\r\n"
-    ")\r\n"
-    "del /f /q \"%%~f0\" >nul 2>nul\r\n",
-    current_path,
-    current_path,
-    replacement_path,
-    current_path
-  );
-  if (written < 0 || (size_t)written >= sizeof(script)) {
-    mb_set_error(ENOMEM, "Failed to build replace-self helper script");
+  if (script_capacity > sizeof(script)) {
+    mb_set_error(ENOMEM, build_error_message);
+    return MB_STATUS_ERROR;
+  }
+  if (mb_build_windows_self_action_script(
+        script,
+        script_capacity,
+        current_path,
+        replacement_path,
+        build_error_message
+      ) != MB_STATUS_OK) {
     return MB_STATUS_ERROR;
   }
   return mb_schedule_windows_action(script);
 }
 
-static int mb_windows_delete_self(const char *current_path) {
-  char script[6144];
-  int written = snprintf(
-    script,
-    sizeof(script),
-    "@echo off\r\n"
-    "setlocal enableextensions\r\n"
-    ":retry\r\n"
-    "del /f /q \"%s\" >nul 2>nul\r\n"
-    "if exist \"%s\" (\r\n"
-    "  timeout /t 1 /nobreak >nul\r\n"
-    "  goto retry\r\n"
-    ")\r\n"
-    "del /f /q \"%%~f0\" >nul 2>nul\r\n",
+static int mb_windows_replace_self(const char *replacement_path, const char *current_path) {
+  return mb_schedule_windows_self_action(
     current_path,
-    current_path
+    replacement_path,
+    8192,
+    "Failed to build replace-self helper script"
   );
-  if (written < 0 || (size_t)written >= sizeof(script)) {
-    mb_set_error(ENOMEM, "Failed to build delete-self helper script");
-    return MB_STATUS_ERROR;
-  }
-  return mb_schedule_windows_action(script);
+}
+
+static int mb_windows_delete_self(const char *current_path) {
+  return mb_schedule_windows_self_action(
+    current_path,
+    NULL,
+    6144,
+    "Failed to build delete-self helper script"
+  );
 }
 #endif
 
@@ -315,8 +367,7 @@ static char *mb_current_executable_path_cstr(void) {
       return NULL;
     }
     if (written < size - 1) {
-      moonbit_bytes_t bytes = mb_wide_to_bytes(buffer);
-      char *result = mb_bytes_to_c_string(bytes);
+      char *result = mb_wide_to_c_string(buffer);
       free(buffer);
       if (result == NULL) {
         return NULL;
@@ -469,6 +520,17 @@ static void mb_free_split_args(char **args, int count) {
 }
 
 #ifdef _WIN32
+static void mb_free_wide_args(wchar_t **args, int count) {
+  int i;
+  if (args == NULL) {
+    return;
+  }
+  for (i = 0; i < count; i++) {
+    free(args[i]);
+  }
+  free(args);
+}
+
 static int mb_append_quoted_windows_arg(
   wchar_t *buffer,
   size_t buffer_len,
@@ -536,11 +598,7 @@ static int mb_run_process_windows(const char *executable, const char *joined_arg
     for (i = 0; i < arg_count; i++) {
       wide_args[i] = mb_utf8_to_wide(args[i]);
       if (wide_args[i] == NULL) {
-        int j;
-        for (j = 0; j < i; j++) {
-          free(wide_args[j]);
-        }
-        free(wide_args);
+        mb_free_wide_args(wide_args, i);
         mb_free_split_args(args, arg_count);
         free(wide_executable);
         return MB_PROCESS_ERROR;
@@ -551,11 +609,7 @@ static int mb_run_process_windows(const char *executable, const char *joined_arg
             &offset,
             wide_args[i]
           ) != MB_STATUS_OK) {
-        int j;
-        for (j = 0; j <= i; j++) {
-          free(wide_args[j]);
-        }
-        free(wide_args);
+        mb_free_wide_args(wide_args, i + 1);
         mb_free_split_args(args, arg_count);
         free(wide_executable);
         return MB_PROCESS_ERROR;
@@ -597,12 +651,7 @@ static int mb_run_process_windows(const char *executable, const char *joined_arg
   mb_clear_error();
 
 cleanup:
-  if (wide_args != NULL) {
-    for (i = 0; i < arg_count; i++) {
-      free(wide_args[i]);
-    }
-    free(wide_args);
-  }
+  mb_free_wide_args(wide_args, arg_count);
   mb_free_split_args(args, arg_count > 0 ? arg_count : 0);
   free(wide_executable);
   return exit_code;
@@ -673,6 +722,33 @@ MOONBIT_FFI_EXPORT int32_t mb_replace_self_platform_code(void) {
 }
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t mb_replace_self_current_executable_path(void) {
+#ifdef _WIN32
+  DWORD size = MAX_PATH;
+  wchar_t *buffer = NULL;
+  while (1) {
+    DWORD written = 0;
+    moonbit_bytes_t out;
+    buffer = (wchar_t *)malloc((size_t)size * sizeof(wchar_t));
+    if (buffer == NULL) {
+      mb_set_error(ENOMEM, "Failed to allocate executable path buffer");
+      return moonbit_make_bytes(0, 0);
+    }
+    written = GetModuleFileNameW(NULL, buffer, size);
+    if (written == 0) {
+      free(buffer);
+      mb_set_windows_error(GetLastError(), "Failed to get current executable path");
+      return moonbit_make_bytes(0, 0);
+    }
+    if (written < size - 1) {
+      buffer[written] = L'\0';
+      out = mb_make_bytes_from_wide_buffer(buffer, (size_t)written + 1);
+      free(buffer);
+      return out;
+    }
+    free(buffer);
+    size *= 2;
+  }
+#else
   char *path = mb_current_executable_path_cstr();
   moonbit_bytes_t out;
   if (path == NULL) {
@@ -681,6 +757,7 @@ MOONBIT_FFI_EXPORT moonbit_bytes_t mb_replace_self_current_executable_path(void)
   out = mb_make_bytes_from_buffer(path, strlen(path));
   free(path);
   return out;
+#endif
 }
 
 MOONBIT_FFI_EXPORT int32_t mb_replace_self_replace_self(moonbit_bytes_t replacement_path) {
