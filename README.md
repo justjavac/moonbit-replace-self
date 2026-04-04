@@ -156,15 +156,6 @@ moon coverage clean
 moon coverage analyze -p justjavac/replace_self -- -f cobertura -o coverage.xml
 ```
 
-Latest local Windows native run:
-
-- Line coverage: `51.56%` (`33 / 64` lines in `coverage.xml`)
-
-This Cobertura number only reflects execution attributed to the package built in
-the current workspace. The integration tests also validate real replace/delete
-behavior by building and running a temporary fixture project copy, so the
-behavioral test surface is larger than the raw line-rate alone suggests.
-
 GitHub Actions uploads coverage from Linux, macOS, and Windows to Codecov, and
 the badges at the top of this README update after Codecov finishes processing
 the latest `main` branch reports.
