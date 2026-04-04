@@ -11,7 +11,3 @@ match @replace_self.replace_self("/tmp/app.next") {
 ```
 
 `delete_self()` uses the same platform rules and returns `Result[Unit, ReplaceSelfError]`.
-
-License: MIT
-
-Author: justjavac <justjavac@gmail.com>
