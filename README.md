@@ -33,7 +33,7 @@ Add the dependency to your `moon.mod.json`:
 ```json
 {
   "deps": {
-    "justjavac/replace_self": "0.1.0"
+    "justjavac/replace_self": "0.1.1"
   }
 }
 ```
