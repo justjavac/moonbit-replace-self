@@ -1,6 +1,6 @@
 {
   "name": "justjavac/replace_self",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "deps": {
     "moonbitlang/x": "0.4.41",
     "justjavac/ffi": "0.2.0"
