@@ -18,15 +18,16 @@ fn wait_until_for_test(
   interval_millis : Int,
   predicate : () -> Bool,
 ) -> Bool {
-  let mut waited = 0
-  while waited <= timeout_millis {
+  for waited = 0 {
+    if waited > timeout_millis {
+      break false
+    }
     if predicate() {
-      return true
+      break true
     }
     sleep_millis_for_test(interval_millis)
-    waited += interval_millis
+    continue waited + interval_millis
   }
-  false
 }
 
 ///|

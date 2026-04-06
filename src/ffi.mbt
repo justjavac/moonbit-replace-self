@@ -36,12 +36,11 @@ fn decode_native_text(platform : Platform, bytes : Bytes) -> String {
     return ""
   }
 
-  let value = match platform {
+  match platform {
     Platform::Windows => @ffi.from_wstr_lossy(bytes)
     Platform::MacOS | Platform::Linux | Platform::Unsupported =>
       decode_utf8(bytes)
   }
-  value
 }
 
 ///|
@@ -103,7 +102,11 @@ fn unit_result_from_status(
 /// Returns the current executable path or a typed discovery error.
 fn current_executable_path_result() -> Result[String, ReplaceSelfError] {
   let platform = current_platform()
-  match decode_optional_text(platform, current_executable_path_ffi()) {
+  let current_path = decode_optional_text(
+    platform,
+    current_executable_path_ffi(),
+  )
+  match current_path {
     Some(path) => Ok(path)
     None => Err(ReplaceSelfError::ExecutablePathUnavailable)
   }

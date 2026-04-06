@@ -153,6 +153,19 @@ fn copy_fixture_project_or_panic(
   source_root : String,
   destination_root : String,
 ) -> Unit {
+  let project_files : Array[Array[String]] = [
+    ["moon.mod.json"],
+    ["src", "moon.pkg"],
+    ["src", "errors.mbt"],
+    ["src", "ffi.mbt"],
+    ["src", "platform.mbt"],
+    ["src", "replace_self.mbt"],
+    ["src", "validation.mbt"],
+    ["src", "replace_self_native.c"],
+    ["src", "cmd", "fixture", "moon.pkg"],
+    ["src", "cmd", "fixture", "main.mbt"],
+  ]
+
   create_dir_or_panic(destination_root)
   create_dir_or_panic(join_path_for_fixture([destination_root, "src"]))
   create_dir_or_panic(join_path_for_fixture([destination_root, "src", "cmd"]))
@@ -160,30 +173,9 @@ fn copy_fixture_project_or_panic(
     join_path_for_fixture([destination_root, "src", "cmd", "fixture"]),
   )
 
-  copy_project_file_or_panic(source_root, destination_root, ["moon.mod.json"])
-  copy_project_file_or_panic(source_root, destination_root, ["src", "moon.pkg"])
-  copy_project_file_or_panic(source_root, destination_root, [
-    "src", "errors.mbt",
-  ])
-  copy_project_file_or_panic(source_root, destination_root, ["src", "ffi.mbt"])
-  copy_project_file_or_panic(source_root, destination_root, [
-    "src", "platform.mbt",
-  ])
-  copy_project_file_or_panic(source_root, destination_root, [
-    "src", "replace_self.mbt",
-  ])
-  copy_project_file_or_panic(source_root, destination_root, [
-    "src", "validation.mbt",
-  ])
-  copy_project_file_or_panic(source_root, destination_root, [
-    "src", "replace_self_native.c",
-  ])
-  copy_project_file_or_panic(source_root, destination_root, [
-    "src", "cmd", "fixture", "moon.pkg",
-  ])
-  copy_project_file_or_panic(source_root, destination_root, [
-    "src", "cmd", "fixture", "main.mbt",
-  ])
+  for relative_parts in project_files {
+    copy_project_file_or_panic(source_root, destination_root, relative_parts)
+  }
 }
 
 ///|
@@ -206,15 +198,16 @@ fn wait_until(
   interval_millis : Int,
   predicate : () -> Bool,
 ) -> Bool {
-  let mut waited = 0
-  while waited <= timeout_millis {
+  for waited = 0 {
+    if waited > timeout_millis {
+      break false
+    }
     if predicate() {
-      return true
+      break true
     }
     sleep_millis_ffi(interval_millis)
-    waited += interval_millis
+    continue waited + interval_millis
   }
-  false
 }
 
 ///|
@@ -306,6 +299,12 @@ fn fixture_executable_names() -> Array[String] {
 }
 
 ///|
+/// Returns the target fixture executable name for the current host.
+fn fixture_target_name() -> String {
+  fixture_executable_names()[0]
+}
+
+///|
 /// Returns the built fixture executable path.
 fn built_fixture_executable(project_root : String) -> String {
   let executable_names = fixture_executable_names()
@@ -313,7 +312,7 @@ fn built_fixture_executable(project_root : String) -> String {
   let debug_root = join_path_for_fixture([
     project_root, "_build", "native", "debug",
   ])
-  let candidates = []
+  let candidates : Array[String] = []
   for name in executable_names {
     candidates.push(
       join_path_for_fixture([debug_root, "build", "cmd", "fixture", name]),
@@ -443,14 +442,7 @@ fn run_fixture(
 test "replace_self replaces a copied fixture executable" {
   let workspace = make_fixture_workspace()
   let fixture_executable = build_fixture_executable(workspace)
-  let target = join_path_for_fixture([
-    workspace,
-    if is_windows_host() {
-      "fixture.exe"
-    } else {
-      "fixture"
-    },
-  ])
+  let target = join_path_for_fixture([workspace, fixture_target_name()])
   let report = join_path_for_fixture([workspace, "replace-report.txt"])
   let (replacement, marker) = prepare_replacement_copy(
     fixture_executable, workspace,
@@ -474,14 +466,7 @@ test "replace_self replaces a copied fixture executable" {
 test "delete_self removes a copied fixture executable" {
   let workspace = make_fixture_workspace()
   let fixture_executable = build_fixture_executable(workspace)
-  let target = join_path_for_fixture([
-    workspace,
-    if is_windows_host() {
-      "fixture.exe"
-    } else {
-      "fixture"
-    },
-  ])
+  let target = join_path_for_fixture([workspace, fixture_target_name()])
   let report = join_path_for_fixture([workspace, "delete-report.txt"])
   copy_file_or_panic(fixture_executable, target)
   ensure_executable_or_panic(target)

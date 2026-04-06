@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 
 #include "moonbit.h"
 
@@ -310,17 +311,12 @@ static int mb_build_windows_self_action_script(
 static int mb_schedule_windows_self_action(
   const char *current_path,
   const char *replacement_path,
-  size_t script_capacity,
   const char *build_error_message
 ) {
   char script[8192];
-  if (script_capacity > sizeof(script)) {
-    mb_set_error(ENOMEM, build_error_message);
-    return MB_STATUS_ERROR;
-  }
   if (mb_build_windows_self_action_script(
         script,
-        script_capacity,
+        sizeof(script),
         current_path,
         replacement_path,
         build_error_message
@@ -334,7 +330,6 @@ static int mb_windows_replace_self(const char *replacement_path, const char *cur
   return mb_schedule_windows_self_action(
     current_path,
     replacement_path,
-    8192,
     "Failed to build replace-self helper script"
   );
 }
@@ -343,19 +338,15 @@ static int mb_windows_delete_self(const char *current_path) {
   return mb_schedule_windows_self_action(
     current_path,
     NULL,
-    6144,
     "Failed to build delete-self helper script"
   );
 }
-#endif
 
-static char *mb_current_executable_path_cstr(void) {
-#ifdef _WIN32
+static wchar_t *mb_current_executable_path_wide(void) {
   DWORD size = MAX_PATH;
-  wchar_t *buffer = NULL;
   while (1) {
     DWORD written = 0;
-    buffer = (wchar_t *)malloc((size_t)size * sizeof(wchar_t));
+    wchar_t *buffer = (wchar_t *)malloc((size_t)size * sizeof(wchar_t));
     if (buffer == NULL) {
       mb_set_error(ENOMEM, "Failed to allocate executable path buffer");
       return NULL;
@@ -367,17 +358,30 @@ static char *mb_current_executable_path_cstr(void) {
       return NULL;
     }
     if (written < size - 1) {
-      char *result = mb_wide_to_c_string(buffer);
-      free(buffer);
-      if (result == NULL) {
-        return NULL;
-      }
+      buffer[written] = L'\0';
       mb_clear_error();
-      return result;
+      return buffer;
     }
     free(buffer);
     size *= 2;
   }
+}
+#endif
+
+static char *mb_current_executable_path_cstr(void) {
+#ifdef _WIN32
+  wchar_t *buffer = mb_current_executable_path_wide();
+  char *result = NULL;
+  if (buffer == NULL) {
+    return NULL;
+  }
+  result = mb_wide_to_c_string(buffer);
+  free(buffer);
+  if (result == NULL) {
+    return NULL;
+  }
+  mb_clear_error();
+  return result;
 #elif defined(__APPLE__)
   uint32_t size = 0;
   char *buffer = NULL;
@@ -723,31 +727,14 @@ MOONBIT_FFI_EXPORT int32_t mb_replace_self_platform_code(void) {
 
 MOONBIT_FFI_EXPORT moonbit_bytes_t mb_replace_self_current_executable_path(void) {
 #ifdef _WIN32
-  DWORD size = MAX_PATH;
-  wchar_t *buffer = NULL;
-  while (1) {
-    DWORD written = 0;
-    moonbit_bytes_t out;
-    buffer = (wchar_t *)malloc((size_t)size * sizeof(wchar_t));
-    if (buffer == NULL) {
-      mb_set_error(ENOMEM, "Failed to allocate executable path buffer");
-      return moonbit_make_bytes(0, 0);
-    }
-    written = GetModuleFileNameW(NULL, buffer, size);
-    if (written == 0) {
-      free(buffer);
-      mb_set_windows_error(GetLastError(), "Failed to get current executable path");
-      return moonbit_make_bytes(0, 0);
-    }
-    if (written < size - 1) {
-      buffer[written] = L'\0';
-      out = mb_make_bytes_from_wide_buffer(buffer, (size_t)written + 1);
-      free(buffer);
-      return out;
-    }
-    free(buffer);
-    size *= 2;
+  wchar_t *buffer = mb_current_executable_path_wide();
+  moonbit_bytes_t out;
+  if (buffer == NULL) {
+    return moonbit_make_bytes(0, 0);
   }
+  out = mb_make_bytes_from_wide_buffer(buffer, wcslen(buffer) + 1);
+  free(buffer);
+  return out;
 #else
   char *path = mb_current_executable_path_cstr();
   moonbit_bytes_t out;

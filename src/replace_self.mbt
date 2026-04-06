@@ -1,4 +1,16 @@
 ///|
+/// Resolves the current executable path before running `on_current_path`.
+fn with_current_executable_path(
+  current_path_result : () -> Result[String, ReplaceSelfError],
+  on_current_path : (String) -> Result[Unit, ReplaceSelfError],
+) -> Result[Unit, ReplaceSelfError] {
+  match current_path_result() {
+    Ok(current_path) => on_current_path(current_path)
+    Err(error) => Err(error)
+  }
+}
+
+///|
 /// Replaces the current executable through injected dependencies.
 fn replace_self_with(
   platform : Platform,
@@ -6,14 +18,12 @@ fn replace_self_with(
   current_path_result : () -> Result[String, ReplaceSelfError],
   replace_action : (String) -> Result[Unit, ReplaceSelfError],
 ) -> Result[Unit, ReplaceSelfError] {
-  match current_path_result() {
-    Ok(current_path) =>
-      match validate_replacement_path(platform, new_executable, current_path) {
-        Ok(validated_path) => replace_action(validated_path)
-        Err(error) => Err(error)
-      }
-    Err(error) => Err(error)
-  }
+  with_current_executable_path(current_path_result, fn(current_path) {
+    match validate_replacement_path(platform, new_executable, current_path) {
+      Ok(validated_path) => replace_action(validated_path)
+      Err(error) => Err(error)
+    }
+  })
 }
 
 ///|
@@ -27,10 +37,7 @@ fn delete_self_with(
     return Err(ReplaceSelfError::UnsupportedPlatform(platform))
   }
 
-  match current_path_result() {
-    Ok(_) => delete_action()
-    Err(error) => Err(error)
-  }
+  with_current_executable_path(current_path_result, fn(_) { delete_action() })
 }
 
 ///|

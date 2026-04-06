@@ -7,28 +7,44 @@ fn is_absolute_path(platform : Platform, path : String) -> Bool {
 
   match platform {
     Platform::Windows => is_windows_absolute_path(path)
-    Platform::MacOS | Platform::Linux =>
-      path.code_unit_at(0) == '/'.to_int().to_uint16()
+    Platform::MacOS | Platform::Linux => is_unix_absolute_path(path)
     Platform::Unsupported => false
   }
 }
 
 ///|
+/// Checks the Unix absolute-path form accepted by the package.
+fn is_unix_absolute_path(path : String) -> Bool {
+  path.code_unit_at(0) == '/'
+}
+
+///|
 /// Checks the Windows absolute-path forms accepted by the package.
 fn is_windows_absolute_path(path : String) -> Bool {
-  if path.length() >= 3 &&
-    is_ascii_letter(path.code_unit_at(0)) &&
-    path.code_unit_at(1) == ':'.to_int().to_uint16() &&
-    (
-      path.code_unit_at(2) == '\\'.to_int().to_uint16() ||
-      path.code_unit_at(2) == '/'.to_int().to_uint16()
-    ) {
-    return true
-  }
+  is_windows_drive_absolute_path(path) || is_windows_unc_path(path)
+}
 
+///|
+/// Checks the `C:\path` and `C:/path` Windows absolute-path forms.
+fn is_windows_drive_absolute_path(path : String) -> Bool {
+  path.length() >= 3 &&
+  is_ascii_letter(path.code_unit_at(0)) &&
+  path.code_unit_at(1) == ':' &&
+  is_windows_separator(path.code_unit_at(2))
+}
+
+///|
+/// Checks the UNC `\\server\share` Windows absolute-path form.
+fn is_windows_unc_path(path : String) -> Bool {
   path.length() >= 2 &&
-  path.code_unit_at(0) == '\\'.to_int().to_uint16() &&
-  path.code_unit_at(1) == '\\'.to_int().to_uint16()
+  path.code_unit_at(0) == '\\' &&
+  path.code_unit_at(1) == '\\'
+}
+
+///|
+/// Checks whether `code_unit` is a Windows path separator.
+fn is_windows_separator(code_unit : UInt16) -> Bool {
+  code_unit == '\\' || code_unit == '/'
 }
 
 ///|
