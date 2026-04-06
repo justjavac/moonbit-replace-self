@@ -67,10 +67,13 @@ fn delete_self_native_result() -> Result[Unit, ReplaceSelfError] {
 ///
 /// Use this when an application has already downloaded a new binary and wants
 /// the current process image on disk to be swapped for that replacement.
+/// The replacement file is treated as the source of truth for the next launch
+/// of the program.
 ///
 /// # Arguments
 ///
-/// - `new_executable`: absolute path to the replacement executable file. The
+/// - `new_executable`: absolute path to the replacement executable file.
+///   Leading and trailing whitespace is trimmed before validation. The
 ///   replacement file must already exist and must not be the same path as the
 ///   current executable.
 ///
@@ -78,27 +81,37 @@ fn delete_self_native_result() -> Result[Unit, ReplaceSelfError] {
 ///
 /// Returns `Ok(())` after the replacement has completed on Unix platforms, or
 /// after the replacement helper has been scheduled successfully on Windows.
+/// A successful result never includes the final executable path because the
+/// current executable location is always the destination.
 ///
-/// Platform behavior:
+/// # Platform behavior
 ///
 /// - Linux and macOS perform the replacement immediately with an atomic rename.
 /// - Windows launches a detached helper script, then completes the replacement
 ///   after the current process exits and the executable file is unlocked.
 ///
-/// On Windows, a successful return means the replacement was scheduled
-/// successfully. Callers should exit soon after `Ok(())` so the helper can take
-/// over and finish the move.
+/// # Notes
+///
+/// - On Unix hosts, the replacement source path is moved into the current
+///   executable path, so the original source path typically disappears after a
+///   successful replacement.
+/// - On Windows, a successful return means the replacement was only scheduled
+///   successfully. Callers should exit soon after `Ok(())` so the helper can
+///   take over and finish the move.
 ///
 /// # Errors
 ///
 /// Returns `Err(ReplaceSelfError)` when:
 ///
-/// - the replacement path is empty after trimming whitespace
-/// - the replacement path is not absolute for the current platform
-/// - the replacement path matches the current executable path
-/// - the current executable path cannot be discovered
-/// - the host platform is unsupported
-/// - the native platform API rejects the replacement request
+/// - `EmptyReplacementPath`: the path is empty after trimming whitespace
+/// - `RelativeReplacementPath`: the path is not absolute for the current
+///   platform
+/// - `ReplacementMatchesCurrentExecutable`: the replacement path equals the
+///   current executable path
+/// - `ExecutablePathUnavailable`: the runtime cannot determine the current
+///   executable path
+/// - `UnsupportedPlatform`: the host platform is unsupported by the native shim
+/// - `NativeFailure`: the operating system rejects the replacement request
 ///
 /// # Example
 /// ```mbt nocheck
@@ -121,28 +134,47 @@ pub fn replace_self(new_executable : String) -> Result[Unit, ReplaceSelfError] {
 ///
 /// Use this when a process should remove its own executable file after it has
 /// finished running, such as a one-shot bootstrapper or an uninstall helper.
+/// This is useful when the executable should clean up its on-disk image as part
+/// of its own shutdown flow.
 ///
 /// # Returns
 ///
 /// Returns `Ok(())` after the file has been unlinked on Unix platforms, or
 /// after the deletion helper has been scheduled successfully on Windows.
+/// The function does not report whether the current process has already exited;
+/// it only reports whether the delete operation or delayed delete setup
+/// succeeded.
 ///
-/// Platform behavior:
+/// # Platform behavior
 ///
 /// - Linux and macOS unlink the file immediately.
 /// - Windows launches a detached helper script that waits for the process to
 ///   exit, then removes the executable file.
 ///
-/// On Windows, a successful return means deletion was scheduled successfully.
-/// Callers should exit soon after `Ok(())` so the helper can remove the file.
+/// # Notes
+///
+/// - On Unix hosts, unlinking removes the directory entry immediately even
+///   though the current process may continue running until it exits.
+/// - On Windows, a successful return means deletion was only scheduled
+///   successfully. Callers should exit soon after `Ok(())` so the helper can
+///   remove the file.
 ///
 /// # Errors
 ///
 /// Returns `Err(ReplaceSelfError)` when:
 ///
-/// - the current executable path cannot be discovered
-/// - the host platform is unsupported
-/// - the native platform API rejects the deletion request
+/// - `ExecutablePathUnavailable`: the runtime cannot determine the current
+///   executable path
+/// - `UnsupportedPlatform`: the host platform is unsupported by the native shim
+/// - `NativeFailure`: the operating system rejects the deletion request
+///
+/// # Example
+/// ```mbt nocheck
+/// match @replace_self.delete_self() {
+///   Ok(()) => ()
+///   Err(error) => println(error)
+/// }
+/// ```
 pub fn delete_self() -> Result[Unit, ReplaceSelfError] {
   delete_self_with(
     current_platform(),
