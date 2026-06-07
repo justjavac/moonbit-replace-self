@@ -154,7 +154,7 @@ fn copy_fixture_project_or_panic(
   destination_root : String,
 ) -> Unit {
   let project_files : Array[Array[String]] = [
-    ["moon.mod.json"],
+    ["moon.mod"],
     ["src", "moon.pkg"],
     ["src", "errors.mbt"],
     ["src", "ffi.mbt"],

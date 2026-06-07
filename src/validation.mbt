@@ -6,9 +6,9 @@ fn is_absolute_path(platform : Platform, path : String) -> Bool {
   }
 
   match platform {
-    Platform::Windows => is_windows_absolute_path(path)
-    Platform::MacOS | Platform::Linux => is_unix_absolute_path(path)
-    Platform::Unsupported => false
+    Windows => is_windows_absolute_path(path)
+    MacOS | Linux => is_unix_absolute_path(path)
+    Unsupported => false
   }
 }
 
@@ -58,7 +58,7 @@ fn is_ascii_letter(code_unit : UInt16) -> Bool {
 ///|
 /// Trims leading and trailing Unicode whitespace.
 fn trim_text(text : String) -> String {
-  text.trim().to_string()
+  text.trim().to_owned()
 }
 
 ///|
@@ -68,21 +68,21 @@ fn validate_replacement_path(
   replacement_path : String,
   current_executable_path : String,
 ) -> Result[String, ReplaceSelfError] {
-  if platform == Platform::Unsupported {
-    return Err(ReplaceSelfError::UnsupportedPlatform(platform))
+  if platform == Unsupported {
+    return Err(UnsupportedPlatform(platform))
   }
 
   let trimmed = trim_text(replacement_path)
   if trimmed.is_empty() {
-    return Err(ReplaceSelfError::EmptyReplacementPath)
+    return Err(EmptyReplacementPath)
   }
 
   if !is_absolute_path(platform, trimmed) {
-    return Err(ReplaceSelfError::RelativeReplacementPath(trimmed))
+    return Err(RelativeReplacementPath(trimmed))
   }
 
   if trimmed == current_executable_path {
-    return Err(ReplaceSelfError::ReplacementMatchesCurrentExecutable(trimmed))
+    return Err(ReplacementMatchesCurrentExecutable(trimmed))
   }
 
   Ok(trimmed)

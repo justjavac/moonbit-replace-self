@@ -18,7 +18,7 @@ fn fixture_args() -> Array[String] {
   if args.length() <= 1 {
     []
   } else {
-    args[1:].to_array()
+    args[1:].to_owned()
   }
 }
 

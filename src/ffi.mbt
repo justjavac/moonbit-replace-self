@@ -37,9 +37,8 @@ fn decode_native_text(platform : Platform, bytes : Bytes) -> String {
   }
 
   match platform {
-    Platform::Windows => @ffi.from_wstr_lossy(bytes)
-    Platform::MacOS | Platform::Linux | Platform::Unsupported =>
-      decode_utf8(bytes)
+    Windows => @ffi.from_wstr_lossy(bytes)
+    MacOS | Linux | Unsupported => decode_utf8(bytes)
   }
 }
 
@@ -78,10 +77,7 @@ fn native_failure(
   fallback_message : String,
 ) -> ReplaceSelfError {
   ignore(last_error_code_ffi())
-  ReplaceSelfError::NativeFailure(
-    action~,
-    message=last_error_message_or(fallback_message),
-  )
+  NativeFailure(action~, message=last_error_message_or(fallback_message))
 }
 
 ///|
@@ -108,6 +104,6 @@ fn current_executable_path_result() -> Result[String, ReplaceSelfError] {
   )
   match current_path {
     Some(path) => Ok(path)
-    None => Err(ReplaceSelfError::ExecutablePathUnavailable)
+    None => Err(ExecutablePathUnavailable)
   }
 }

@@ -28,17 +28,15 @@ instead of a full updater framework.
 
 ## Installation
 
-Add the dependency to your `moon.mod.json`:
+Add the dependency to your `moon.mod`:
 
-```json
-{
-  "deps": {
-    "justjavac/replace_self": "0.1.1"
-  }
+```moonbit
+import {
+  "justjavac/replace_self@0.1.2",
 }
 ```
 
-This package only supports the native backend. Set `"preferred-target": "native"`
+This package only supports the native backend. Set `preferred_target = "native"`
 for the smoothest workflow when building command-line tools or desktop apps.
 
 ## API

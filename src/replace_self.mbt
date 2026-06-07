@@ -33,8 +33,8 @@ fn delete_self_with(
   current_path_result : () -> Result[String, ReplaceSelfError],
   delete_action : () -> Result[Unit, ReplaceSelfError],
 ) -> Result[Unit, ReplaceSelfError] {
-  if platform == Platform::Unsupported {
-    return Err(ReplaceSelfError::UnsupportedPlatform(platform))
+  if platform == Unsupported {
+    return Err(UnsupportedPlatform(platform))
   }
 
   with_current_executable_path(current_path_result, fn(_) { delete_action() })

@@ -6,7 +6,7 @@ extern "C" fn sleep_millis_for_test(milliseconds : Int) -> Unit = "mb_replace_se
 /// Joins path segments with the platform separator.
 fn join_path_for_test(platform : Platform, parts : Array[String]) -> String {
   match platform {
-    Platform::Windows => parts.join("\\")
+    Windows => parts.join("\\")
     _ => parts.join("/")
   }
 }
@@ -32,63 +32,58 @@ fn wait_until_for_test(
 
 ///|
 test "platform code mapping is stable" {
-  assert_eq(platform_from_code(1), Platform::Windows)
-  assert_eq(platform_from_code(2), Platform::MacOS)
-  assert_eq(platform_from_code(3), Platform::Linux)
-  assert_eq(platform_from_code(0), Platform::Unsupported)
+  assert_eq(platform_from_code(1), Windows)
+  assert_eq(platform_from_code(2), MacOS)
+  assert_eq(platform_from_code(3), Linux)
+  assert_eq(platform_from_code(0), Unsupported)
 }
 
 ///|
 test "replace_self_with succeeds for a valid absolute path" {
   let result = replace_self_with(
-    Platform::Windows,
+    Windows,
     "C:\\temp\\next.exe",
     fn() { Ok("C:\\temp\\current.exe") },
     fn(_) { Ok(()) },
   )
-  assert_eq(result, Ok(()))
+  assert_true(result == Ok(()))
 }
 
 ///|
 test "replace_self_with propagates current path failures" {
   let result = replace_self_with(
-    Platform::Linux,
+    Linux,
     "/tmp/next",
-    fn() { Err(ReplaceSelfError::ExecutablePathUnavailable) },
+    fn() { Err(ExecutablePathUnavailable) },
     fn(_) { Ok(()) },
   )
-  assert_eq(result, Err(ReplaceSelfError::ExecutablePathUnavailable))
+  assert_true(result == Err(ExecutablePathUnavailable))
 }
 
 ///|
 test "delete_self_with succeeds when dependencies succeed" {
-  let result = delete_self_with(
-    Platform::MacOS,
-    fn() { Ok("/Applications/demo") },
-    fn() { Ok(()) },
-  )
-  assert_eq(result, Ok(()))
+  let result = delete_self_with(MacOS, fn() { Ok("/Applications/demo") }, fn() {
+    Ok(())
+  })
+  assert_true(result == Ok(()))
 }
 
 ///|
 test "delete_self_with rejects unsupported platforms" {
-  let result = delete_self_with(Platform::Unsupported, fn() { Ok("ignored") }, fn() {
+  let result = delete_self_with(Unsupported, fn() { Ok("ignored") }, fn() {
     Ok(())
   })
-  assert_eq(
-    result,
-    Err(ReplaceSelfError::UnsupportedPlatform(Platform::Unsupported)),
-  )
+  assert_true(result == Err(UnsupportedPlatform(Unsupported)))
 }
 
 ///|
 test "join_path uses platform separators" {
   assert_eq(
-    join_path_for_test(Platform::Linux, ["/tmp", "folder", "app"]),
+    join_path_for_test(Linux, ["/tmp", "folder", "app"]),
     "/tmp/folder/app",
   )
   assert_eq(
-    join_path_for_test(Platform::Windows, ["C:", "apps", "tool.exe"]),
+    join_path_for_test(Windows, ["C:", "apps", "tool.exe"]),
     "C:\\apps\\tool.exe",
   )
 }

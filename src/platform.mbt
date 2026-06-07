@@ -5,16 +5,26 @@ pub enum Platform {
   MacOS
   Linux
   Unsupported
-} derive(Eq, Show)
+} derive(Eq, Debug)
+
+///|
+pub impl Show for Platform with fn to_string(self) {
+  match self {
+    Windows => "Windows"
+    MacOS => "MacOS"
+    Linux => "Linux"
+    Unsupported => "Unsupported"
+  }
+}
 
 ///|
 /// Maps a native platform code to the public `Platform` enum.
 fn platform_from_code(code : Int) -> Platform {
   match code {
-    1 => Platform::Windows
-    2 => Platform::MacOS
-    3 => Platform::Linux
-    _ => Platform::Unsupported
+    1 => Windows
+    2 => MacOS
+    3 => Linux
+    _ => Unsupported
   }
 }
 

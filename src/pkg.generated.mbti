@@ -1,6 +1,10 @@
 // Generated using `moon info`, DON'T EDIT IT
 package "justjavac/replace_self"
 
+import {
+  "moonbitlang/core/debug",
+}
+
 // Values
 pub fn delete_self() -> Result[Unit, ReplaceSelfError]
 
@@ -14,7 +18,8 @@ pub enum Platform {
   MacOS
   Linux
   Unsupported
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
+pub impl Show for Platform
 
 pub enum ReplaceSelfError {
   EmptyReplacementPath
@@ -23,7 +28,8 @@ pub enum ReplaceSelfError {
   ExecutablePathUnavailable
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
-} derive(Eq, Show)
+} derive(Eq, @debug.Debug)
+pub impl Show for ReplaceSelfError
 
 // Type aliases
 

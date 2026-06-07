@@ -12,4 +12,18 @@ pub enum ReplaceSelfError {
   ExecutablePathUnavailable
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
-} derive(Eq, Show)
+} derive(Eq, Debug)
+
+///|
+pub impl Show for ReplaceSelfError with fn to_string(self) {
+  match self {
+    EmptyReplacementPath => "EmptyReplacementPath"
+    RelativeReplacementPath(path) => "RelativeReplacementPath(\{path})"
+    ReplacementMatchesCurrentExecutable(path) =>
+      "ReplacementMatchesCurrentExecutable(\{path})"
+    ExecutablePathUnavailable => "ExecutablePathUnavailable"
+    UnsupportedPlatform(platform) => "UnsupportedPlatform(\{platform})"
+    NativeFailure(action~, message~) =>
+      "NativeFailure(action=\{action}, message=\{message})"
+  }
+}
