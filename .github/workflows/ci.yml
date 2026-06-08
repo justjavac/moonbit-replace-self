@@ -50,8 +50,34 @@ jobs:
       - name: Show MoonBit version
         run: moon version
 
-      - name: Sync dependencies
-        run: moon update
+      - name: Sync dependencies on Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            moon update && exit 0
+            status=$?
+            if [ "$attempt" -eq 3 ]; then
+              exit "$status"
+            fi
+            sleep $((attempt * 10))
+          done
+
+      - name: Sync dependencies on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            moon update
+            if ($LASTEXITCODE -eq 0) {
+              exit 0
+            }
+            $status = $LASTEXITCODE
+            if ($attempt -eq 3) {
+              exit $status
+            }
+            Start-Sleep -Seconds ($attempt * 10)
+          }
 
       - name: Check native target
         run: moon check --target native
@@ -104,7 +130,16 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
 
       - name: Sync dependencies
-        run: moon update
+        shell: bash
+        run: |
+          for attempt in 1 2 3; do
+            moon update && exit 0
+            status=$?
+            if [ "$attempt" -eq 3 ]; then
+              exit "$status"
+            fi
+            sleep $((attempt * 10))
+          done
 
       - name: Verify formatting and generated files
         shell: bash
