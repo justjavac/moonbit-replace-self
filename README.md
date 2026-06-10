@@ -32,7 +32,7 @@ Add the dependency to your `moon.mod`:
 
 ```moonbit
 import {
-  "justjavac/replace_self@0.1.2",
+  "justjavac/replace_self@0.1.3",
 }
 ```
 

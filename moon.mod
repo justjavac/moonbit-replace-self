@@ -1,6 +1,6 @@
 name = "justjavac/replace_self"
 
-version = "0.1.2"
+version = "0.1.3"
 
 import {
   "moonbitlang/x@0.4.45",
