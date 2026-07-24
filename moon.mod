@@ -3,7 +3,7 @@ name = "justjavac/replace_self"
 version = "0.1.4"
 
 import {
-  "moonbitlang/x@0.4.46",
+  "moonbitlang/x@0.4.47",
   "justjavac/ffi@0.2.4",
 }
 
@@ -19,6 +19,4 @@ description = "Replace or delete the currently running executable on Linux, macO
 
 preferred_target = "native"
 
-options(
-  source: "src",
-)
+source = "src"
