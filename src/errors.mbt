@@ -14,10 +14,13 @@ pub enum ReplaceSelfError {
   NativeFailure(action~ : String, message~ : String)
 } derive(Eq, Debug)
 
+///|
 pub extend ReplaceSelfError with Eq::{equal, not_equal}
 
+///|
 pub extend ReplaceSelfError with @debug.Debug::{to_repr}
 
+///|
 pub extend ReplaceSelfError with Show::{to_string, output}
 
 ///|

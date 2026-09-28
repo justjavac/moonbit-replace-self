@@ -7,10 +7,13 @@ pub enum Platform {
   Unsupported
 } derive(Eq, Debug)
 
+///|
 pub extend Platform with Eq::{equal, not_equal}
 
+///|
 pub extend Platform with @debug.Debug::{to_repr}
 
+///|
 pub extend Platform with Show::{to_string, output}
 
 ///|
