@@ -3,7 +3,7 @@ name = "justjavac/replace_self"
 version = "0.1.4"
 
 import {
-  "moonbitlang/x@0.4.47",
+  "moonbitlang/x@0.5.5",
   "justjavac/ffi@0.2.4",
 }
 

@@ -221,7 +221,7 @@ fn is_dir_or_false(path : String) -> Bool {
 ///|
 /// Lists a directory or returns an empty array on failure.
 fn read_dir_or_empty(path : String) -> Array[String] {
-  @fs.read_dir(path) catch {
+  @fs.read_dir(path).to_owned() catch {
     _ => []
   }
 }
