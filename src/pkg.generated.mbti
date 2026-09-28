@@ -19,6 +19,11 @@ pub enum Platform {
   Linux
   Unsupported
 } derive(Eq, @debug.Debug)
+pub fn Platform::equal(Self, Self) -> Bool
+pub fn Platform::not_equal(Self, Self) -> Bool
+pub fn Platform::output(Self, &Logger) -> Unit
+pub fn Platform::to_repr(Self) -> @debug.Repr
+pub fn Platform::to_string(Self) -> String
 pub impl Show for Platform
 
 pub enum ReplaceSelfError {
@@ -29,9 +34,13 @@ pub enum ReplaceSelfError {
   UnsupportedPlatform(Platform)
   NativeFailure(action~ : String, message~ : String)
 } derive(Eq, @debug.Debug)
+pub fn ReplaceSelfError::equal(Self, Self) -> Bool
+pub fn ReplaceSelfError::not_equal(Self, Self) -> Bool
+pub fn ReplaceSelfError::output(Self, &Logger) -> Unit
+pub fn ReplaceSelfError::to_repr(Self) -> @debug.Repr
+pub fn ReplaceSelfError::to_string(Self) -> String
 pub impl Show for ReplaceSelfError
 
 // Type aliases
 
 // Traits
-
