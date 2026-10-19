@@ -1,6 +1,6 @@
 ///|
 /// Sleeps for at least `milliseconds`.
-extern "C" fn sleep_millis_for_test(milliseconds : Int) -> Unit = "mb_replace_self_sleep_millis"
+extern "C" fn sleep_millis_for_test(milliseconds : Int32) -> Unit = "mb_replace_self_sleep_millis"
 
 ///|
 /// Joins path segments with the platform separator.
@@ -14,8 +14,8 @@ fn join_path_for_test(platform : Platform, parts : Array[String]) -> String {
 ///|
 /// Polls until `predicate` succeeds or the timeout elapses.
 fn wait_until_for_test(
-  timeout_millis : Int,
-  interval_millis : Int,
+  timeout_millis : Int32,
+  interval_millis : Int32,
   predicate : () -> Bool,
 ) -> Bool {
   for waited = 0 {

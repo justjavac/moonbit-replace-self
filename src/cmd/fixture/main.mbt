@@ -3,7 +3,7 @@
 fn write_report_and_exit(
   report_path : String,
   content : String,
-  code : Int,
+  code : Int32,
 ) -> Unit {
   @fs.write_string_to_file(report_path, content) catch {
     _ => ()

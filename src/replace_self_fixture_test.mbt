@@ -1,15 +1,15 @@
 ///|
 /// Runs an external process and returns its exit code.
 #borrow(executable, arguments)
-extern "C" fn run_process_ffi(executable : Bytes, arguments : Bytes) -> Int = "mb_replace_self_run_process"
+extern "C" fn run_process_ffi(executable : Bytes, arguments : Bytes) -> Int32 = "mb_replace_self_run_process"
 
 ///|
 /// Sleeps for at least `milliseconds`.
-extern "C" fn sleep_millis_ffi(milliseconds : Int) -> Unit = "mb_replace_self_sleep_millis"
+extern "C" fn sleep_millis_ffi(milliseconds : Int32) -> Unit = "mb_replace_self_sleep_millis"
 
 ///|
 /// Returns the native platform code for the host.
-extern "C" fn platform_code_for_test() -> Int = "mb_replace_self_platform_code"
+extern "C" fn platform_code_for_test() -> Int32 = "mb_replace_self_platform_code"
 
 ///|
 /// Returns whether the current host is Windows.
@@ -180,7 +180,10 @@ fn copy_fixture_project_or_panic(
 
 ///|
 /// Runs a child process and panics when spawning fails.
-fn run_process_or_panic(executable : String, arguments : Array[String]) -> Int {
+fn run_process_or_panic(
+  executable : String,
+  arguments : Array[String],
+) -> Int32 {
   let status = run_process_ffi(
     @utf8.encode(executable),
     @utf8.encode(arguments.join("\n")),
@@ -194,8 +197,8 @@ fn run_process_or_panic(executable : String, arguments : Array[String]) -> Int {
 ///|
 /// Polls until `predicate` succeeds or the timeout elapses.
 fn wait_until(
-  timeout_millis : Int,
-  interval_millis : Int,
+  timeout_millis : Int32,
+  interval_millis : Int32,
   predicate : () -> Bool,
 ) -> Bool {
   for waited = 0 {
@@ -270,8 +273,8 @@ fn log_fixture_search(root : String, executable_name : String) -> Unit {
 fn log_fixture_search_walk(
   root : String,
   executable_name : String,
-  depth : Int,
-  max_depth : Int,
+  depth : Int32,
+  max_depth : Int32,
 ) -> Unit {
   if depth > max_depth || !@fs.path_exists(root) || !is_dir_or_false(root) {
     return
@@ -400,7 +403,7 @@ fn prepare_replacement_copy(
 
 ///|
 /// Reads the trailing bytes of a file.
-fn read_file_tail(path : String, length : Int) -> Bytes {
+fn read_file_tail(path : String, length : Int32) -> Bytes {
   let contents = @fs.read_file_to_bytes(path) catch { _ => panic() }
   let bytes = contents.to_array()
   if bytes.length() < length {

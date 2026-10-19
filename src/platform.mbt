@@ -28,7 +28,7 @@ pub impl Show for Platform with fn to_string(self) {
 
 ///|
 /// Maps a native platform code to the public `Platform` enum.
-fn platform_from_code(code : Int) -> Platform {
+fn platform_from_code(code : Int32) -> Platform {
   match code {
     1 => Windows
     2 => MacOS

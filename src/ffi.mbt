@@ -1,6 +1,6 @@
 ///|
 /// Returns the native platform code for the current process.
-extern "C" fn platform_code_ffi() -> Int = "mb_replace_self_platform_code"
+extern "C" fn platform_code_ffi() -> Int32 = "mb_replace_self_platform_code"
 
 ///|
 /// Returns the current executable path in the native platform encoding, or an empty value.
@@ -9,15 +9,15 @@ extern "C" fn current_executable_path_ffi() -> Bytes = "mb_replace_self_current_
 ///|
 /// Replaces the current executable with `replacement_path`.
 #borrow(replacement_path)
-extern "C" fn replace_self_ffi(replacement_path : Bytes) -> Int = "mb_replace_self_replace_self"
+extern "C" fn replace_self_ffi(replacement_path : Bytes) -> Int32 = "mb_replace_self_replace_self"
 
 ///|
 /// Deletes the current executable.
-extern "C" fn delete_self_ffi() -> Int = "mb_replace_self_delete_self"
+extern "C" fn delete_self_ffi() -> Int32 = "mb_replace_self_delete_self"
 
 ///|
 /// Returns the last native error code observed by the C shim.
-extern "C" fn last_error_code_ffi() -> Int = "mb_replace_self_last_error_code"
+extern "C" fn last_error_code_ffi() -> Int32 = "mb_replace_self_last_error_code"
 
 ///|
 /// Returns the last native error message as UTF-8 bytes.
@@ -83,7 +83,7 @@ fn native_failure(
 ///|
 /// Converts a native "0 means success" status code into `Result`.
 fn unit_result_from_status(
-  status : Int,
+  status : Int32,
   action : String,
   fallback_message : String,
 ) -> Result[Unit, ReplaceSelfError] {
