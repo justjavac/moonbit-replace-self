@@ -624,8 +624,11 @@ static int mb_run_process_windows(const char *executable, const char *joined_arg
   ZeroMemory(&startup_info, sizeof(startup_info));
   ZeroMemory(&process_info, sizeof(process_info));
   startup_info.cb = sizeof(startup_info);
+  /* Passing NULL lets Windows resolve the executable through the standard
+     search order, including PATH, matching execvp on Unix. The command line
+     already starts with the quoted executable name. */
   if (!CreateProcessW(
-        wide_executable,
+        NULL,
         command_line,
         NULL,
         NULL,
