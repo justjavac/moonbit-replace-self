@@ -101,8 +101,16 @@ jobs:
           moon test src/replace_self_test.mbt --target native --enable-coverage -v
           moon test src/replace_self_wbtest.mbt --target native --enable-coverage -v
 
-      - name: Generate coverage report
+      - name: Generate coverage report on Unix
+        if: runner.os != 'Windows'
         run: moon coverage analyze -p justjavac/replace_self -- -f cobertura -o _build/${{ matrix.coverage_file }}
+
+      # Windows collects coverage from the stable test targets only. `coverage
+      # analyze` re-runs the whole suite and would drag in the fixture
+      # integration test, so generate the report from the collected traces.
+      - name: Generate coverage report on Windows
+        if: runner.os == 'Windows'
+        run: moon coverage report -p justjavac/replace_self -f cobertura -o _build/${{ matrix.coverage_file }}
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
